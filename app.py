@@ -1,10 +1,9 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO
 import serial
 import time
 import threading
 import re
-import json
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -32,7 +31,7 @@ def read_from_arduino():
                 voltage = float(voltage_match.group(2))
                 socketio.emit('cell_voltage', {'cell': cell, 'voltage': voltage})
                 
-                # Default to OK, unless overwritten in following lines
+                # Default to OK, unless overwritten
                 last_status = cell_statuses.get(cell)
                 if last_status != "OK":
                     socketio.emit('cell_status', {'cell': cell, 'status': 'OK'})
@@ -52,27 +51,28 @@ def index():
 
 @app.route('/set_thresholds', methods=['POST'])
 def set_thresholds():
-    thresholds = request.json
-    print("Received thresholds:", thresholds)
+    data = request.get_json()
 
-    ordered_keys = [
-        "A_CELL_min", "A_CELL_max", "B_CELL_min", "B_CELL_max",
-        "C_CELL_min", "C_CELL_max", "D_CELL_min", "D_CELL_max",
-        "E_CELL_min", "E_CELL_max", "F_CELL_min", "F_CELL_max",
-        "G_CELL_min", "G_CELL_max", "H_CELL_min", "H_CELL_max",
-        "I_CELL_min", "I_CELL_max", "J_CELL_min", "J_CELL_max",
-        "K_CELL_min", "K_CELL_max", "L_CELL_min", "L_CELL_max",
-        "M_CELL_min", "M_CELL_max", "N_CELL_min", "N_CELL_max",
-        "O_CELL_min", "O_CELL_max", "P_CELL_min", "P_CELL_max"
+    ordered_cells = [
+        "A_CELL", "B_CELL", "C_CELL", "D_CELL",
+        "E_CELL", "F_CELL", "G_CELL", "H_CELL",
+        "I_CELL", "J_CELL", "K_CELL", "L_CELL",
+        "M_CELL", "N_CELL", "O_CELL", "P_CELL"
     ]
+    
+    csv_parts = []
+    for cell in ordered_cells:
+        min_v = data.get(f"{cell}_min", "0.000")
+        max_v = data.get(f"{cell}_max", "0.000")
+        csv_parts.append(str(min_v))
+        csv_parts.append(str(max_v))
 
-    values = [thresholds[key] for key in ordered_keys]
+    csv_string = ",".join(csv_parts) + "\n"
 
-    # Join into a single comma-separated string
-    threshold_str = ",".join(values)
-    serial_connection.write(f"<THRESHOLDS>{threshold_str}</THRESHOLDS>\n".encode())
-    return {'status': 'sent'}
+    # Send CSV over Serial to Arduino
+    serial_connection.write(csv_string.encode())
 
+    return jsonify({"message": "Thresholds sent"}), 200
 
 def start_serial_thread():
     thread = threading.Thread(target=read_from_arduino)
