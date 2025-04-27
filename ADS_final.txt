@@ -1,4 +1,4 @@
-#include <Wire.h>
+#include <Wire.h> 
 #include <EEPROM.h>
 #include <Adafruit_ADS1X15.h>
 
@@ -222,7 +222,11 @@ void readSerialUpdateThresholds() {
 
         // Max voltage
         nextComma = input.indexOf(',', lastComma + 1);
-        if (nextComma == -1) break;
+        if (nextComma == -1) { 
+          // Last value case (no comma after it)
+          cells[i].maxV = input.substring(lastComma + 1).toFloat();
+          break;
+        }
         cells[i].maxV = input.substring(lastComma + 1, nextComma).toFloat();
         lastComma = nextComma;
       }
