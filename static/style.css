@@ -1,0 +1,44 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    padding: 20px;
+    text-align: center;
+  }
+  
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    max-width: 800px;
+    margin: auto;
+  }
+  
+  .cell {
+    border: 2px solid #ccc;
+    border-radius: 12px;
+    padding: 15px;
+    background-color: #fff;
+    transition: 0.3s;
+  }
+  
+  .cell.ok {
+    background-color: #c8f7c5; /* green */
+  }
+  
+  .cell.undervoltage {
+    background-color: #f7c5c5; /* red */
+  }
+  
+  .cell.overvoltage {
+    background-color: #f7e7c5; /* yellow-orange */
+  }
+  
+  h3 {
+    margin: 0;
+  }
+  
+  .voltage {
+    font-size: 1.2em;
+    margin: 10px 0;
+  }
+  
