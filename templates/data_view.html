@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battery Log Viewer</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .status-under { background: #fee2e2; color: #b91c1c; }
+        .status-over { background: #fef9c3; color: #854d0e; }
+        .status-ok { background: #d1fae5; color: #065f46; }
+        .table-row:hover { background: #f1f5f9; transition: background 0.2s; }
+        .header { background: linear-gradient(to right, #1e40af, #3b82f6); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <header class="header text-white py-4 px-3 shadow">
+        <div class="container mx-auto">
+            <h1 class="text-2xl font-bold">Battery Cell Data Log</h1>
+        </div>
+    </header>
+    <main class="container mx-auto py-4 px-3 flex-grow">
+        <div class="bg-white rounded shadow overflow-x-auto">
+            <table class="w-full border-collapse text-sm">
+                <thead>
+                    <tr class="bg-blue-500 text-white">
+                        <th class="py-2 px-3 text-left font-medium">ID</th>
+                        <th class="py-2 px-3 text-left font-medium">Timestamp</th>
+                        <th class="py-2 px-3 text-left font-medium">Shift</th>
+                        <th class="py-2 px-3 text-left font-medium">QR Code</th>
+                        {% for cell in cells %}
+                            <th class="py-2 px-3 text-left font-medium">{{ cell }} Voltage</th>
+                            <th class="py-2 px-3 text-left font-medium">{{ cell }} Status</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in records %}
+                    <tr class="table-row border-b border-gray-100">
+                        <td class="py-2 px-3 text-gray-600">{{ row['id'] }}</td>
+                        <td class="py-2 px-3 text-gray-600">{{ row['timestamp'] }}</td>
+                        <td class="py-2 px-3 text-gray-600">{{ row['shift'] }}</td>
+                        <td class="py-2 px-3 text-gray-600">{{ row['qr_code'] }}</td>
+                        {% for cell in cells %}
+                            <td class="py-2 px-3 text-gray-600">{{ row[cell + '_voltage'] }}</td>
+                            <td class="py-2 px-3 status-{{ row[cell + '_status'] | lower }} font-medium">
+                                {{ row[cell + '_status'] }}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+    <footer class="bg-gray-700 text-white py-2 text-center text-sm">
+        <p>© 2025 Battery Monitoring System</p>
+    </footer>
+</body>
+</html>
