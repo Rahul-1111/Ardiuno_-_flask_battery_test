@@ -2,137 +2,98 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>🔋 Battery Monitor Dashboard</title>
-
-  <!-- CSS Styles -->
-  <link rel="stylesheet" href="/static/style.css">
-  
-  <!-- Socket.IO -->
   <script src="/static/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-gauges/gauge.min.js"></script>
 
   <style>
     body {
-      font-family: 'Poppins', Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(135deg, #e0eafc, #cfdef3);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-    }
-
-    h1 {
-      margin: 30px 0 10px;
-      font-size: 2.5rem;
-      color: #34495e;
+      font-family: Arial, sans-serif;
+      text-align: center;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 20px;
-      width: 90%;
-      max-width: 1200px;
-      margin-bottom: 40px;
-      padding: 10px;
+      margin: 20px;
     }
 
     .cell {
-      background: #fff;
-      border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      transition: 0.3s ease;
       text-align: center;
-      position: relative;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      background-color: #f9fafb;
     }
 
-    .cell:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-    }
-
-    .label {
-      font-weight: bold;
-      font-size: 1.2rem;
-      margin-bottom: 8px;
-    }
-
-    .voltage, .status {
-      font-size: 1rem;
-      margin: 5px 0;
-    }
-
-    /* Status Colors */
-    .signal-ok { background: #2ecc71; color: white; }
-    .signal-error { background: #e74c3c; color: white; }
-    .signal-warning { background: #f39c12; color: white; }
-
-    form {
-      background: white;
-      padding: 25px;
-      margin-bottom: 40px;
-      width: 90%;
-      max-width: 1200px;
-      border-radius: 16px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-
-    form h2 {
-      margin-bottom: 20px;
-      color: #2c3e50;
+    .form-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
     }
 
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 20px;
     }
 
-    form label {
-      font-weight: 600;
-      display: block;
-      margin-bottom: 5px;
-    }
-
-    form input[type="number"] {
-      width: 100%;
-      padding: 8px;
-      border-radius: 8px;
+    .form-row input, .form-row button {
+      padding: 10px;
       border: 1px solid #ccc;
-      font-size: 1rem;
+      border-radius: 5px;
     }
 
-    button {
-      margin-top: 20px;
-      padding: 12px 25px;
-      font-size: 1rem;
-      background: #3498db;
+    #thresholdForm {
+      display: none;
+      margin: 20px;
+      padding: 20px;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      background-color: #f1f1f1;
+    }
+
+    #toggleFormBtn {
+      padding: 10px 20px;
+      background-color: #007bff;
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 5px;
       cursor: pointer;
-      transition: 0.3s;
     }
 
-    button:hover {
-      background: #2980b9;
+    #toggleFormBtn:hover {
+      background-color: #0056b3;
+    }
+
+    .emoji {
+      font-size: 24px;
     }
   </style>
 </head>
-
 <body>
   <h1>🔋 Battery Monitor Dashboard</h1>
+  <button id="toggleFormBtn">Show Threshold Form</button>
 
-  <!-- Grid of Cells -->
   <div class="grid" id="cellGrid"></div>
 
-  <!-- Threshold Setting Form -->
   <form id="thresholdForm">
     <h2>⚙️ Set Voltage Thresholds</h2>
+    <div class="form-row">
+      <div>
+        <label>Default Min Voltage</label>
+        <input type="number" id="default_min" step="0.1" placeholder="e.g. 20.0">
+      </div>
+      <div>
+        <label>Default Max Voltage</label>
+        <input type="number" id="default_max" step="0.1" placeholder="e.g. 80.0">
+      </div>
+      <div>
+        <button type="button" id="fillAllBtn">Fill All</button>
+      </div>
+    </div>
     <div class="form-grid" id="thresholdInputs"></div>
     <button type="submit">Send Thresholds</button>
   </form>
@@ -145,87 +106,139 @@
       "I CELL", "J CELL", "K CELL", "L CELL",
       "M CELL", "N CELL", "O CELL", "P CELL"
     ];
+    const emojiMap = {
+      OK: "😊",
+      Overvoltage: "😟",
+      Undervoltage: "😢"
+    };
     const cells = {};
     const grid = document.getElementById('cellGrid');
 
-    // Setup cell cards
     cellLabels.forEach(label => {
+      const id = label.replace(" ", "_");
       const cellDiv = document.createElement('div');
       cellDiv.className = 'cell';
-      cellDiv.id = label.replace(" ", "_");
+      cellDiv.id = id;
 
       cellDiv.innerHTML = `
         <div class="label">${label}</div>
-        <div class="voltage">Voltage: --- V</div>
-        <div class="status">Status: ---</div>
+        <canvas id="gauge_${id}" width="150" height="150"></canvas>
+        <div class="emoji" id="emoji_${id}">😐</div>
       `;
 
       grid.appendChild(cellDiv);
 
+      const gauge = new RadialGauge({
+        renderTo: `gauge_${id}`,
+        width: 150,
+        height: 150,
+        units: "V",
+        minValue: 0,
+        maxValue: 100,
+        majorTicks: ["0","20","40","60","80","100"],
+        minorTicks: 5,
+        strokeTicks: true,
+        highlights: [
+          { from: 0, to: 20, color: "rgba(255,82,82,0.3)" },
+          { from: 20, to: 80, color: "rgba(76,175,80,0.2)" },
+          { from: 80, to: 100, color: "rgba(255,235,59,0.4)" }
+        ],
+        colorPlate: "#f9fafb",
+        borderShadowWidth: 0,
+        borders: false,
+        needleType: "arrow",
+        needleWidth: 2,
+        needleCircleSize: 6,
+        animation: true,
+        animationDuration: 800,
+        animationRule: "linear",
+        value: 0
+      }).draw();
+
       cells[label] = {
-        voltageDiv: cellDiv.querySelector('.voltage'),
-        statusDiv: cellDiv.querySelector('.status'),
-        cellDiv
+        gauge,
+        emojiDiv: cellDiv.querySelector(`#emoji_${id}`)
       };
     });
 
-    // Update cell voltage
     socket.on('cell_voltage', ({ cell, voltage }) => {
       const cellObj = cells[cell];
       if (!cellObj) return;
-      cellObj.voltageDiv.textContent = `Voltage: ${voltage.toFixed(3)} V`;
+      cellObj.gauge.value = voltage;
     });
 
-    // Update cell status
     socket.on('cell_status', ({ cell, status }) => {
       const cellObj = cells[cell];
       if (!cellObj) return;
-      const div = cellObj.cellDiv;
-      div.classList.remove('signal-ok', 'signal-error', 'signal-warning');
-      if (status === 'OK') div.classList.add('signal-ok');
-      else if (status === 'Undervoltage') div.classList.add('signal-error');
-      else if (status === 'Overvoltage') div.classList.add('signal-warning');
-      cellObj.statusDiv.textContent = `Status: ${status}`;
+      cellObj.emojiDiv.textContent = emojiMap[status] || "😐";
     });
 
-    // Generate threshold inputs
+    // Threshold form logic
     const thresholdInputs = document.getElementById('thresholdInputs');
     cellLabels.forEach(label => {
       const key = label.replace(" ", "_");
       ['Min', 'Max'].forEach(type => {
         const div = document.createElement('div');
         div.innerHTML = `
-          <label for="${key}_${type.toLowerCase()}">${label} ${type}</label>
-          <input type="number" name="${key}_${type.toLowerCase()}" step="0.001" required>
+          <label>${label} ${type}</label>
+          <input type="number" name="${key}_${type.toLowerCase()}" step="0.1" required>
         `;
         thresholdInputs.appendChild(div);
       });
     });
 
-    // Submit threshold form
-    document.getElementById('thresholdForm').addEventListener('submit', async (e) => {
+    document.getElementById('fillAllBtn').addEventListener('click', () => {
+      const minVal = parseFloat(document.getElementById('default_min').value);
+      const maxVal = parseFloat(document.getElementById('default_max').value);
+      if (isNaN(minVal) || isNaN(maxVal)) {
+        alert("⚠️ Please enter valid min/max first");
+        return;
+      }
+      document.querySelectorAll('#thresholdInputs input').forEach(input => {
+        input.value = input.name.includes('min') ? minVal.toFixed(1) : maxVal.toFixed(1);
+      });
+    });
+
+    document.getElementById('thresholdForm').addEventListener('submit', async e => {
       e.preventDefault();
       const formData = new FormData(e.target);
       const thresholds = {};
       formData.forEach((value, key) => {
-        thresholds[key] = parseFloat(value).toFixed(3);
+        thresholds[key] = parseFloat(value).toFixed(1);
       });
 
-      try {
-        const res = await fetch('/set_thresholds', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(thresholds)
-        });
-        if (res.ok) {
-          alert('✅ Thresholds updated successfully!');
-        } else {
-          alert('❌ Failed to update thresholds.');
+      // Update gauges with the new min/max values
+      cellLabels.forEach(label => {
+        const key = label.replace(" ", "_");
+        const minVal = parseFloat(thresholds[`${key}_min`]);
+        const maxVal = parseFloat(thresholds[`${key}_max`]);
+
+        if (minVal && maxVal) {
+          const cellObj = cells[label];
+          if (cellObj) {
+            // Update the gauge range dynamically based on user input
+            cellObj.gauge.minValue = minVal;
+            cellObj.gauge.maxValue = maxVal;
+            cellObj.gauge.redraw();
+          }
         }
-      } catch (err) {
-        console.error(err);
-        alert('⚡ Network Error');
-      }
+      });
+
+      const res = await fetch('/set_thresholds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(thresholds)
+      });
+      if (res.ok) alert('✅ Thresholds updated');
+      else alert('❌ Failed to update thresholds');
+    });
+
+    // Toggle visibility
+    const toggleBtn = document.getElementById('toggleFormBtn');
+    const form = document.getElementById('thresholdForm');
+    toggleBtn.addEventListener('click', () => {
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      toggleBtn.textContent = form.style.display === 'none' ? 'Show Threshold Form' : 'Hide Threshold Form';
     });
   </script>
 </body>
