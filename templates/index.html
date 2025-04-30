@@ -9,67 +9,108 @@
 
   <style>
     body {
-      font-family: Arial, sans-serif;
-      text-align: center;
+      font-family: 'Segoe UI', sans-serif;
+      background: radial-gradient(circle, #d4f1f4, #f7fafd);
+      margin: 0;
+      padding: 0;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 20px 0;
+      font-size: 2.2rem;
+      color: #1d4ed8;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-      margin: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 16px;
+      width: 95%;
+      max-width: 1400px;
+      margin: 0 auto 30px;
     }
 
     .cell {
-      padding: 20px;
+      background: #ffffffee;
+      border-radius: 14px;
+      padding: 10px;
       text-align: center;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-      background-color: #f9fafb;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .label {
+      font-weight: bold;
+      font-size: 1rem;
+      margin-bottom: 5px;
+    }
+
+    .emoji {
+      font-size: 1.8rem;
+      margin-top: 4px;
+    }
+
+    form {
+      background: #eef6fb;
+      padding: 18px;
+      width: 90%;
+      max-width: 1200px;
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+      margin-bottom: 30px;
     }
 
     .form-row {
       display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
+    .form-row > div {
+      flex: 1;
+      min-width: 180px;
     }
 
-    .form-row input, .form-row button {
-      padding: 10px;
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      border-radius: 5px;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    #fillAllBtn {
+      background-color: #10b981;
+      color: white;
+    }
+
+    #toggleFormBtn {
+      background-color: #f59e0b;
+      color: white;
+      margin: 16px 0;
     }
 
     #thresholdForm {
       display: none;
-      margin: 20px;
-      padding: 20px;
-      border: 2px solid #ccc;
-      border-radius: 10px;
-      background-color: #f1f1f1;
     }
 
-    #toggleFormBtn {
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    #toggleFormBtn:hover {
-      background-color: #0056b3;
-    }
-
-    .emoji {
-      font-size: 24px;
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
     }
   </style>
 </head>
@@ -128,6 +169,7 @@
 
       grid.appendChild(cellDiv);
 
+      // Create gauge (0–100V)
       const gauge = new RadialGauge({
         renderTo: `gauge_${id}`,
         width: 150,
@@ -205,23 +247,6 @@
       const thresholds = {};
       formData.forEach((value, key) => {
         thresholds[key] = parseFloat(value).toFixed(1);
-      });
-
-      // Update gauges with the new min/max values
-      cellLabels.forEach(label => {
-        const key = label.replace(" ", "_");
-        const minVal = parseFloat(thresholds[`${key}_min`]);
-        const maxVal = parseFloat(thresholds[`${key}_max`]);
-
-        if (minVal && maxVal) {
-          const cellObj = cells[label];
-          if (cellObj) {
-            // Update the gauge range dynamically based on user input
-            cellObj.gauge.minValue = minVal;
-            cellObj.gauge.maxValue = maxVal;
-            cellObj.gauge.redraw();
-          }
-        }
       });
 
       const res = await fetch('/set_thresholds', {
