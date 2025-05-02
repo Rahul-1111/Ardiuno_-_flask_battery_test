@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>🔋 Battery Monitor Dashboard</title>
   <script src="/static/socket.io.min.js"></script>
-
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -19,11 +18,29 @@
       min-height: 100vh;
     }
 
-    h1 {
-      margin: 40px 0 10px;
-      font-size: 2.8rem;
-      color: #1e40af;
-      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+    header, footer {
+      width: 100%;
+      background-color: rgb(30, 173, 175);
+      color: white;
+      text-align: center;
+      padding: 15px;
+      text-transform: uppercase;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      font-size: 1.5rem;
     }
 
     .grid {
@@ -32,7 +49,7 @@
       gap: 24px;
       width: 90%;
       max-width: 1500px;
-      margin-bottom: 40px;
+      margin: 20px 0;
     }
 
     .cell {
@@ -45,12 +62,12 @@
     }
 
     .cell:hover {
-      transform: translateY(-8px);
+      transform: translateY(-5px);
     }
 
     .label {
       font-weight: 600;
-      font-size: 1.5rem;
+      font-size: 1.2rem;
       color: #334155;
     }
 
@@ -60,72 +77,18 @@
     }
 
     .signal-ok {
-      background: #4CAF50; /* Green */
+      background: #4CAF50;
       color: white;
-      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
     }
 
     .signal-error {
-      background: #FF5252; /* Red */
+      background: #FF5252;
       color: white;
-      box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3);
     }
 
     .signal-warning {
-      background: #FFEB3B; /* Yellow */
+      background: #FFEB3B;
       color: #1e293b;
-      box-shadow: 0 4px 12px rgba(255, 235, 59, 0.3);
-    }
-
-    form {
-      background: #f1f5f9;
-      padding: 30px;
-      width: 90%;
-      max-width: 1500px;
-      border-radius: 20px;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
-      margin-bottom: 60px;
-    }
-
-    form h2 {
-      margin-bottom: 15px;
-      font-size: 1.6rem;
-      color: #1e3a8a;
-    }
-
-    .form-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-
-    .form-row > div {
-      flex: 1;
-      min-width: 200px;
-    }
-
-    label {
-      display: block;
-      font-weight: 500;
-      margin-bottom: 6px;
-      color: rgb(0, 0, 0);
-    }
-
-    input[type="number"] {
-      width: 90%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 2px solid rgb(6, 87, 186);
-      font-size: 1rem;
-      background: white;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 35px;
-      margin-top: 20px;
     }
 
     button {
@@ -160,43 +123,114 @@
       background: #d97706;
     }
 
+    form {
+      display: none;
+      background: #f1f5f9;
+      padding: 30px;
+      width: 90%;
+      max-width: 1500px;
+      border-radius: 20px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+      margin-bottom: 40px;
+    }
+
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .form-row > div {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: black;
+    }
+
+    input[type="number"] {
+      width: 90%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 2px solid rgb(6, 87, 186);
+      font-size: 1rem;
+      background: white;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table#thresholdTable {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #thresholdTable th, #thresholdTable td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    #thresholdTable th {
+      background-color: #f2f2f2;
+    }
+
     @media (max-width: 500px) {
       h1 {
-        font-size: 2rem;
+        font-size: 1.6rem;
       }
     }
   </style>
 </head>
 <body>
-  <h1>🔋 Battery Monitor Dashboard</h1>
+  <header>
+    <h1>🔋 Battery Monitor Dashboard</h1>
+  </header>
 
-  <button id="toggleFormBtn">Show Threshold Form</button>
+  <button id="toggleFormBtn">Set Threshold Form</button>
 
-  <div class="grid" id="cellGrid"></div>
-
-  <form id="thresholdForm" style="display: none;">
+  <form id="thresholdForm">
     <h2>⚙️ Set Voltage Thresholds</h2>
 
     <div class="form-row">
       <div>
         <label for="default_min">Default Min Voltage</label>
-        <input type="number" id="default_min" step="0.001" placeholder="e.g. 3.200">
+        <input type="number" id="default_min" step="0.001" placeholder="e.g. 1.000">
       </div>
       <div>
         <label for="default_max">Default Max Voltage</label>
-        <input type="number" id="default_max" step="0.001" placeholder="e.g. 4.200">
+        <input type="number" id="default_max" step="0.001" placeholder="e.g. 7.000">
       </div>
       <div style="align-self: end;">
         <button type="button" id="fillAllBtn">Fill All</button>
       </div>
     </div>
 
-    <div class="form-grid" id="thresholdInputs"></div>
+    <div class="table-container">
+      <table id="thresholdTable">
+        <thead>
+          <tr>
+            <th>Cell</th>
+            <th>Min Voltage</th>
+            <th>Max Voltage</th>
+          </tr>
+        </thead>
+        <tbody id="thresholdTableBody"></tbody>
+      </table>
+    </div>
 
     <div style="margin-top: 20px;">
       <button type="submit">Send Thresholds</button>
     </div>
   </form>
+
+  <div class="grid" id="cellGrid"></div>
 
   <script>
     const socket = io();
@@ -249,17 +283,16 @@
       cellObj.statusDiv.textContent = `Status: ${status}`;
     });
 
-    const thresholdInputs = document.getElementById('thresholdInputs');
+    const thresholdTableBody = document.getElementById('thresholdTableBody');
     cellLabels.forEach(label => {
       const key = label.replace(" ", "_");
-      ['Min', 'Max'].forEach(type => {
-        const div = document.createElement('div');
-        div.innerHTML = `
-          <label for="${key}_${type.toLowerCase()}">${label} ${type}</label>
-          <input type="number" name="${key}_${type.toLowerCase()}" step="0.001" required>
-        `;
-        thresholdInputs.appendChild(div);
-      });
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${label}</td>
+        <td><input type="number" name="${key}_min" step="0.001" required></td>
+        <td><input type="number" name="${key}_max" step="0.001" required></td>
+      `;
+      thresholdTableBody.appendChild(tr);
     });
 
     document.getElementById('fillAllBtn').addEventListener('click', () => {
@@ -271,7 +304,7 @@
         return;
       }
 
-      document.querySelectorAll('#thresholdInputs input').forEach(input => {
+      document.querySelectorAll('#thresholdTableBody input').forEach(input => {
         if (input.name.includes('min')) input.value = minVal.toFixed(3);
         else input.value = maxVal.toFixed(3);
       });
@@ -307,7 +340,7 @@
     toggleBtn.addEventListener('click', () => {
       const isVisible = form.style.display === 'block';
       form.style.display = isVisible ? 'none' : 'block';
-      toggleBtn.textContent = isVisible ? 'Show Threshold Form' : 'Hide Threshold';
+      toggleBtn.textContent = isVisible ? 'Set Threshold Form' : 'Hide Threshold Form';
     });
   </script>
 </body>

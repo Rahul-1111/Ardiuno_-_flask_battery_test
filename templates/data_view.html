@@ -1,61 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Battery Log Viewer</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        .status-under { background: #fee2e2; color: #b91c1c; }
-        .status-over { background: #fef9c3; color: #854d0e; }
-        .status-ok { background: #d1fae5; color: #065f46; }
-        .table-row:hover { background: #f1f5f9; transition: background 0.2s; }
-        .header { background: linear-gradient(to right, #1e40af, #3b82f6); }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Battery Log</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: "Segoe UI", sans-serif;
+      font-size: 14px;
+      background: #f0f4f8;
+      color: #333;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: linear-gradient(to right, #2563eb, #3b82f6);
+      color: #fff;
+      padding: 16px 20px;
+      font-size: 20px;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    main {
+      flex: 1;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    thead {
+      background-color: #3b82f6;
+      color: white;
+    }
+    th, td {
+      padding: 1px 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      font-weight: 600;
+      font-size: 13px;
+    }
+    tr:hover {
+      background: #f1f5f9;
+    }
+    td {
+      font-size: 13px;
+    }
+
+    /* Status styling */
+    .status-ok {
+      background-color: #dcfce7;
+      color: #15803d;
+      font-weight: bold;
+      text-align: center;
+      border-radius: 4px;
+    }
+    .status-under {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      font-weight: bold;
+      text-align: center;
+      border-radius: 4px;
+    }
+    .status-over {
+      background-color: #fef9c3;
+      color: #92400e;
+      font-weight: bold;
+      text-align: center;
+      border-radius: 4px;
+    }
+
+    footer {
+      background: #1e3a8a;
+      color: #fff;
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
+    }
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col">
-    <header class="header text-white py-4 px-3 shadow">
-        <div class="container mx-auto">
-            <h1 class="text-2xl font-bold">Battery Cell Data Log</h1>
-        </div>
-    </header>
-    <main class="container mx-auto py-4 px-3 flex-grow">
-        <div class="bg-white rounded shadow overflow-x-auto">
-            <table class="w-full border-collapse text-sm">
-                <thead>
-                    <tr class="bg-blue-500 text-white">
-                        <th class="py-2 px-3 text-left font-medium">ID</th>
-                        <th class="py-2 px-3 text-left font-medium">Timestamp</th>
-                        <th class="py-2 px-3 text-left font-medium">Shift</th>
-                        <th class="py-2 px-3 text-left font-medium">QR Code</th>
-                        {% for cell in cells %}
-                            <th class="py-2 px-3 text-left font-medium">{{ cell }} Voltage</th>
-                            <th class="py-2 px-3 text-left font-medium">{{ cell }} Status</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in records %}
-                    <tr class="table-row border-b border-gray-100">
-                        <td class="py-2 px-3 text-gray-600">{{ row['id'] }}</td>
-                        <td class="py-2 px-3 text-gray-600">{{ row['timestamp'] }}</td>
-                        <td class="py-2 px-3 text-gray-600">{{ row['shift'] }}</td>
-                        <td class="py-2 px-3 text-gray-600">{{ row['qr_code'] }}</td>
-                        {% for cell in cells %}
-                            {% set cell_key = cell.replace(' ', '_') %}
-                            <td class="py-2 px-3 text-gray-600">{{ row[cell_key + '_voltage'] }}</td>
-                            <td class="py-2 px-3 status-{{ row[cell_key + '_status'] | lower }} font-medium">
-                                {{ row[cell_key + '_status'] }}
-                            </td>
-                        {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </main>
-    <footer class="bg-gray-700 text-white py-2 text-center text-sm">
-        <p>© 2025 Battery Monitoring System</p>
-    </footer>
+<body>
+  <header>Battery Cell Data Log</header>
+  <main>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>TIME</th>
+          <th>SHIFT</th>
+          <th>QR</th>
+          {% for cell in cells %}
+            <th>{{ cell }} V</th>
+            <th>{{ cell }} Status</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in records %}
+        <tr>
+          <td>{{ row['id'] }}</td>
+          <td>{{ row['timestamp'] }}</td>
+          <td>{{ row['shift'] }}</td>
+          <td>{{ row['qr_code'] }}</td>
+          {% for cell in cells %}
+            {% set cell_key = cell.replace(' ', '_') %}
+            <td>{{ row[cell_key + '_voltage'] }}</td>
+            {% set status = row[cell_key + '_status'] | lower %}
+            <td class="status-{{ 'ok' if 'ok' in status else 'under' if 'under' in status else 'over' if 'over' in status else '' }}">
+            {{ row[cell_key + '_status'] }}
+            </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </main>
+  <footer>© 2025 Battery Monitoring System</footer>
 </body>
 </html>

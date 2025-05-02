@@ -6,6 +6,7 @@ import time
 import threading
 import re
 from datetime import datetime
+import os
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -13,7 +14,22 @@ socketio = SocketIO(app)
 # Serial port configuration
 SERIAL_PORT = "COM3"
 BAUD_RATE = 115200
-serial_connection = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+
+def open_serial_connection():
+    attempts = 5
+    while attempts > 0:
+        try:
+            serial_connection = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+            print(f"Serial port {SERIAL_PORT} opened successfully.")
+            return serial_connection
+        except serial.SerialException as e:
+            print(f"Error opening serial port {SERIAL_PORT}: {e}")
+            attempts -= 1
+            time.sleep(1)  # Wait 1 second before retrying
+    print(f"Failed to open serial port after several attempts.")
+    return None
+
+serial_connection = open_serial_connection()
 
 # Database file
 DB_FILE = "battery_data.db"
@@ -88,7 +104,7 @@ def read_from_arduino():
 
     while True:
         try:
-            if serial_connection.in_waiting > 0:
+            if serial_connection and serial_connection.in_waiting > 0:
                 line = serial_connection.readline().decode('utf-8', errors='ignore').strip()
                 print("Received:", line)
 
@@ -150,8 +166,11 @@ def set_thresholds():
         csv_parts.append(str(min_v))
         csv_parts.append(str(max_v))
     csv_string = ",".join(csv_parts) + "\n"
-    serial_connection.write(csv_string.encode())
-    return jsonify({"message": "Thresholds sent"}), 200
+    if serial_connection:
+        serial_connection.write(csv_string.encode())
+        return jsonify({"message": "Thresholds sent"}), 200
+    else:
+        return jsonify({"error": "Serial connection not available"}), 500
 
 @app.route('/view-data')
 def view_data():
