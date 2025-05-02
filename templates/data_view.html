@@ -42,9 +42,10 @@
                         <td class="py-2 px-3 text-gray-600">{{ row['shift'] }}</td>
                         <td class="py-2 px-3 text-gray-600">{{ row['qr_code'] }}</td>
                         {% for cell in cells %}
-                            <td class="py-2 px-3 text-gray-600">{{ row[cell + '_voltage'] }}</td>
-                            <td class="py-2 px-3 status-{{ row[cell + '_status'] | lower }} font-medium">
-                                {{ row[cell + '_status'] }}
+                            {% set cell_key = cell.replace(' ', '_') %}
+                            <td class="py-2 px-3 text-gray-600">{{ row[cell_key + '_voltage'] }}</td>
+                            <td class="py-2 px-3 status-{{ row[cell_key + '_status'] | lower }} font-medium">
+                                {{ row[cell_key + '_status'] }}
                             </td>
                         {% endfor %}
                     </tr>
