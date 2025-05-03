@@ -18,29 +18,46 @@
       min-height: 100vh;
     }
 
-    header, footer {
+    header {
+      position: relative;
       width: 100%;
       background-color: rgb(30, 173, 175);
       color: white;
       text-align: center;
-      padding: 15px;
+      padding: 8px;
       text-transform: uppercase;
+    }
+
+    #databasePageBtn {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      background-color: #4CAF50;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #databasePageBtn:hover {
+      background-color: #388e3c;
     }
 
     header h1 {
       margin: 0;
-      font-size: 2rem;
+      font-size: 1.5rem;
     }
 
     footer {
+      background-color: rgb(30, 173, 175);
+      color: #fff;
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
       position: fixed;
       bottom: 0;
-      left: 0;
-    }
-
-    h2 {
-      margin-bottom: 10px;
-      font-size: 1.5rem;
+      width: 100%;
     }
 
     .grid {
@@ -94,10 +111,10 @@
     button {
       background: #2563eb;
       color: white;
-      padding: 12px 20px;
+      padding: 12px 15px;
       border: none;
       border-radius: 10px;
-      font-size: 1rem;
+      font-size: 0.8rem;
       cursor: pointer;
       transition: background 0.3s ease;
     }
@@ -123,21 +140,45 @@
       background: #d97706;
     }
 
+    #resetBtn {
+      position: absolute;
+      top: 8px;
+      left: 5px;
+      background-color: rgb(31, 110, 246);
+      color: white;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #resetBtn:hover {
+      background-color: white;
+      color: rgb(31, 110, 246);
+      border: 1px solid rgb(31, 110, 246);
+    }
+
     form {
       display: none;
       background: #f1f5f9;
-      padding: 30px;
+      padding: 10px;
       width: 90%;
-      max-width: 1500px;
+      max-width: 1200px;
       border-radius: 20px;
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
-      margin-bottom: 40px;
+      margin-bottom: 20px;
     }
 
     .form-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 25px;
       margin-bottom: 20px;
     }
 
@@ -148,42 +189,41 @@
 
     label {
       display: block;
-      font-weight: 500;
+      font-weight: 300;
       margin-bottom: 6px;
       color: black;
     }
 
     input[type="number"] {
       width: 90%;
-      padding: 10px;
+      padding: 5px;
       border-radius: 8px;
       border: 2px solid rgb(6, 87, 186);
-      font-size: 1rem;
+      font-size: 0.8rem;
       background: white;
     }
 
-    .table-container {
-      overflow-x: auto;
+    .threshold-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
     }
 
-    table#thresholdTable {
-      width: 100%;
-      border-collapse: collapse;
+    .threshold-cell {
+      background: #fff;
+      padding: 10px;
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
     }
 
-    #thresholdTable th, #thresholdTable td {
-      padding: 8px;
-      text-align: left;
-      border-bottom: 1px solid #ddd;
-    }
-
-    #thresholdTable th {
-      background-color: #f2f2f2;
+    .threshold-cell label {
+      font-weight: bold;
     }
 
     @media (max-width: 500px) {
-      h1 {
-        font-size: 1.6rem;
+      .threshold-grid {
+        grid-template-columns: repeat(1, 1fr);
       }
     }
   </style>
@@ -191,9 +231,12 @@
 <body>
   <header>
     <h1>🔋 Battery Monitor Dashboard</h1>
+    <button id="databasePageBtn" onclick="window.location.href='/view-data'">Database</button>
   </header>
 
   <button id="toggleFormBtn">Set Threshold Form</button>
+  <button id="resetBtn" title="Refresh Page">⭮</button>
+  <button id="startMeasurementBtn" title="Start Measurement">▶ Start Measurement</button>
 
   <form id="thresholdForm">
     <h2>⚙️ Set Voltage Thresholds</h2>
@@ -212,18 +255,7 @@
       </div>
     </div>
 
-    <div class="table-container">
-      <table id="thresholdTable">
-        <thead>
-          <tr>
-            <th>Cell</th>
-            <th>Min Voltage</th>
-            <th>Max Voltage</th>
-          </tr>
-        </thead>
-        <tbody id="thresholdTableBody"></tbody>
-      </table>
-    </div>
+    <div class="threshold-grid" id="thresholdGrid"></div>
 
     <div style="margin-top: 20px;">
       <button type="submit">Send Thresholds</button>
@@ -231,6 +263,8 @@
   </form>
 
   <div class="grid" id="cellGrid"></div>
+
+  <footer>© 2025 Battery Monitoring System</footer>
 
   <script>
     const socket = io();
@@ -242,6 +276,7 @@
     ];
     const cells = {};
     const grid = document.getElementById('cellGrid');
+    const thresholdGrid = document.getElementById('thresholdGrid');
 
     cellLabels.forEach(label => {
       const cellDiv = document.createElement('div');
@@ -260,6 +295,17 @@
         statusDiv: cellDiv.querySelector('.status'),
         cellDiv
       };
+
+      // Threshold input
+      const key = label.replace(" ", "_");
+      const cellInput = document.createElement('div');
+      cellInput.className = 'threshold-cell';
+      cellInput.innerHTML = `
+        <label>${label}</label>
+        <input type="number" name="${key}_min" step="0.001" placeholder="Min Voltage" required>
+        <input type="number" name="${key}_max" step="0.001" placeholder="Max Voltage" required>
+      `;
+      thresholdGrid.appendChild(cellInput);
     });
 
     socket.on('cell_voltage', ({ cell, voltage }) => {
@@ -271,40 +317,23 @@
     socket.on('cell_status', ({ cell, status }) => {
       const cellObj = cells[cell];
       if (!cellObj) return;
-
       const div = cellObj.cellDiv;
       div.classList.remove('signal-ok', 'signal-error', 'signal-warning');
-
       const normalized = status.toLowerCase();
       if (normalized === 'ok') div.classList.add('signal-ok');
       else if (normalized === 'undervoltage') div.classList.add('signal-error');
       else if (normalized === 'overvoltage') div.classList.add('signal-warning');
-
       cellObj.statusDiv.textContent = `Status: ${status}`;
-    });
-
-    const thresholdTableBody = document.getElementById('thresholdTableBody');
-    cellLabels.forEach(label => {
-      const key = label.replace(" ", "_");
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${label}</td>
-        <td><input type="number" name="${key}_min" step="0.001" required></td>
-        <td><input type="number" name="${key}_max" step="0.001" required></td>
-      `;
-      thresholdTableBody.appendChild(tr);
     });
 
     document.getElementById('fillAllBtn').addEventListener('click', () => {
       const minVal = parseFloat(document.getElementById('default_min').value);
       const maxVal = parseFloat(document.getElementById('default_max').value);
-
       if (isNaN(minVal) || isNaN(maxVal)) {
         alert("⚠️ Please enter valid min and max values first.");
         return;
       }
-
-      document.querySelectorAll('#thresholdTableBody input').forEach(input => {
+      document.querySelectorAll('.threshold-cell input').forEach(input => {
         if (input.name.includes('min')) input.value = minVal.toFixed(3);
         else input.value = maxVal.toFixed(3);
       });
@@ -324,23 +353,30 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(thresholds)
         });
-        if (res.ok) {
-          alert('✅ Thresholds updated successfully!');
-        } else {
-          alert('❌ Failed to update thresholds.');
-        }
+        if (res.ok) alert('✅ Thresholds updated successfully!');
+        else alert('❌ Failed to update thresholds.');
       } catch (err) {
         console.error(err);
         alert('⚡ Network Error');
       }
     });
 
-    const toggleBtn = document.getElementById('toggleFormBtn');
-    const form = document.getElementById('thresholdForm');
-    toggleBtn.addEventListener('click', () => {
+    document.getElementById('toggleFormBtn').addEventListener('click', () => {
+      const form = document.getElementById('thresholdForm');
       const isVisible = form.style.display === 'block';
       form.style.display = isVisible ? 'none' : 'block';
-      toggleBtn.textContent = isVisible ? 'Set Threshold Form' : 'Hide Threshold Form';
+      toggleFormBtn.textContent = isVisible ? 'Set Threshold Form' : 'Hide Threshold Form';
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      location.reload();
+    });
+    socket.on('reset_data', function () {
+      console.log("Reset triggered from Arduino");
+      document.getElementById('resetBtn').click();  // Simulate click
+    });
+    document.getElementById('startMeasurementBtn').addEventListener('click', () => {
+      socket.emit('start_measurement');  // Send the command to Flask backend
     });
   </script>
 </body>

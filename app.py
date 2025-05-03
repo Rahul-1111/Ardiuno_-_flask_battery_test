@@ -7,14 +7,31 @@ import threading
 import re
 from datetime import datetime
 import os
+import sys
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='threading')
 
 # Serial port configuration
 SERIAL_PORT = "COM3"
 BAUD_RATE = 115200
 
+# --- Resource path helper for PyInstaller ---
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller .exe"""
+    if hasattr(sys, '_MEIPASS'):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+# --- Database file ---
+DB_FILE = resource_path("battery_data.db")
+
+# --- List of expected cells ---
+expected_cells = [f"{chr(c)} CELL" for c in range(ord('A'), ord('P') + 1)]
+
+# --- Open serial connection ---
 def open_serial_connection():
     attempts = 5
     while attempts > 0:
@@ -25,19 +42,13 @@ def open_serial_connection():
         except serial.SerialException as e:
             print(f"Error opening serial port {SERIAL_PORT}: {e}")
             attempts -= 1
-            time.sleep(1)  # Wait 1 second before retrying
+            time.sleep(1)
     print(f"Failed to open serial port after several attempts.")
     return None
 
 serial_connection = open_serial_connection()
 
-# Database file
-DB_FILE = "battery_data.db"
-
-# List of expected cells
-expected_cells = [f"{chr(c)} CELL" for c in range(ord('A'), ord('P') + 1)]
-
-# --- Database Setup ---
+# --- Initialize database ---
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -54,7 +65,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# --- Shift Calculation ---
+# --- Shift logic ---
 def get_current_shift():
     now = datetime.now().time()
     if now >= datetime.strptime('06:00:00', '%H:%M:%S').time() and now < datetime.strptime('14:00:00', '%H:%M:%S').time():
@@ -64,13 +75,13 @@ def get_current_shift():
     else:
         return 'Shift 3'
 
-# --- Save Full Cell Data ---
+# --- Save full cell data ---
 def save_full_cell_data(cell_data):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     shift = get_current_shift()
-    qr_code = "XYZ123"  # Replace with actual QR code input when integrated
+    qr_code = "XYZ123"  # Placeholder QR code
 
     columns = ', '.join([f"{cell.replace(' ', '_')}_voltage, {cell.replace(' ', '_')}_status" for cell in expected_cells])
     values = [timestamp, shift, qr_code]
@@ -91,12 +102,13 @@ def save_full_cell_data(cell_data):
     finally:
         conn.close()
 
-# --- Serial Reading Thread ---
+# --- Serial reader ---
 def read_from_arduino():
     voltage_pattern = re.compile(r'([A-P] CELL) Voltage: ([-0-9.]+) V')
     status_pattern = re.compile(r'([A-P] CELL) (Undervoltage|Overvoltage)')
     final_summary_pattern = re.compile(r'📊 Final Summary:')
     cycle_end_pattern = re.compile(r'Cycle End')
+    reset_data_pattern = re.compile(r'RESET DATA')
 
     cell_data = {cell: {'voltage': None, 'status': 'OK'} for cell in expected_cells}
     last_statuses = {cell: None for cell in expected_cells}
@@ -121,7 +133,6 @@ def read_from_arduino():
                     cell_data[cell]['voltage'] = voltage
                     socketio.emit('cell_voltage', {'cell': cell, 'voltage': voltage})
 
-                    # If no status is reported explicitly, default to OK
                     if last_statuses[cell] != "OK":
                         socketio.emit('cell_status', {'cell': cell, 'status': 'OK'})
                         cell_data[cell]['status'] = "OK"
@@ -144,6 +155,10 @@ def read_from_arduino():
                     cell_data = {cell: {'voltage': None, 'status': 'OK'} for cell in expected_cells}
                     last_statuses = {cell: None for cell in expected_cells}
                     collecting_data = False
+
+                if reset_data_pattern.search(line):
+                    print("Reset data detected, triggering frontend reset.")
+                    socketio.emit('reset_data')
 
             time.sleep(0.01)
         except Exception as e:
@@ -171,6 +186,15 @@ def set_thresholds():
         return jsonify({"message": "Thresholds sent"}), 200
     else:
         return jsonify({"error": "Serial connection not available"}), 500
+    
+@socketio.on('start_measurement')
+def handle_start_measurement():
+    if serial_connection:
+        try:
+            serial_connection.write(b'MEASUREMENT START\n')
+            print("Sent MEASUREMENT START to Arduino from GUI.")
+        except Exception as e:
+            print(f"Failed to send MEASUREMENT START to Arduino: {e}")
 
 @app.route('/view-data')
 def view_data():
@@ -182,13 +206,13 @@ def view_data():
     conn.close()
     return render_template('data_view.html', records=records, cells=expected_cells)
 
-# --- Thread Start ---
+# --- Start background thread ---
 def start_serial_thread():
     thread = threading.Thread(target=read_from_arduino)
     thread.daemon = True
     thread.start()
 
-# --- Main ---
+# --- App entrypoint ---
 if __name__ == '__main__':
     init_db()
     start_serial_thread()
