@@ -226,6 +226,35 @@
         grid-template-columns: repeat(1, 1fr);
       }
     }
+    #startMeasurementBtn {
+      margin-top: 20px;
+      margin-bottom: 50px;
+      padding: 14px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      background: #3b82f6;
+      box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+    }
+    
+    #startMeasurementBtn:hover {
+      background: #2563eb;
+    }
+    
+    #startMeasurementBtn.cycle-active {
+      background: #f97316;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7); }
+      70% { box-shadow: 0 0 0 20px rgba(249, 115, 22, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+    }
+    
   </style>
 </head>
 <body>
@@ -236,7 +265,6 @@
 
   <button id="toggleFormBtn">Set Threshold Form</button>
   <button id="resetBtn" title="Refresh Page">⭮</button>
-  <button id="startMeasurementBtn" title="Start Measurement">▶ Start Measurement</button>
 
   <form id="thresholdForm">
     <h2>⚙️ Set Voltage Thresholds</h2>
@@ -263,6 +291,7 @@
   </form>
 
   <div class="grid" id="cellGrid"></div>
+  <button id="startMeasurementBtn" title="Start Measurement" >▶ Start Measurement</button>
 
   <footer>© 2025 Battery Monitoring System</footer>
 
@@ -378,6 +407,19 @@
     document.getElementById('startMeasurementBtn').addEventListener('click', () => {
       socket.emit('start_measurement');  // Send the command to Flask backend
     });
+    const startBtn = document.getElementById('startMeasurementBtn');
+
+  socket.on('cycle_start', () => {
+    startBtn.innerHTML = "⏸ Cycle Running...";
+    startBtn.classList.add("cycle-active");
+    startBtn.disabled = true; // optional: prevent manual clicking
+  });
+
+  socket.on('cycle_end', () => {
+    startBtn.innerHTML = "▶ Start Measurement";
+    startBtn.classList.remove("cycle-active");
+    startBtn.disabled = false;
+  });
   </script>
 </body>
 </html>

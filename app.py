@@ -109,6 +109,8 @@ def read_from_arduino():
     final_summary_pattern = re.compile(r'📊 Final Summary:')
     cycle_end_pattern = re.compile(r'Cycle End')
     reset_data_pattern = re.compile(r'RESET DATA')
+    line = serial_connection.readline().decode('utf-8', errors='ignore').strip()
+    print("Received:", line)
 
     cell_data = {cell: {'voltage': None, 'status': 'OK'} for cell in expected_cells}
     last_statuses = {cell: None for cell in expected_cells}
@@ -159,6 +161,15 @@ def read_from_arduino():
                 if reset_data_pattern.search(line):
                     print("Reset data detected, triggering frontend reset.")
                     socketio.emit('reset_data')
+                
+                # Emit cycle start/end to frontend
+                if "Cycle Start" in line:
+                    socketio.emit('cycle_start')
+                    print("Cycle started - emitting cycle_start to frontend")
+
+                if "Cycle End" in line:
+                    socketio.emit('cycle_end')
+                    print("Cycle ended - emitting cycle_end to frontend")
 
             time.sleep(0.01)
         except Exception as e:
