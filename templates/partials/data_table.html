@@ -1,0 +1,16 @@
+{% for row in records %}
+<tr>
+  <td>{{ row['id'] }}</td>
+  <td>{{ row['timestamp'] }}</td>
+  <td>{{ row['shift'] }}</td>
+  <td>{{ row['qr_code'] }}</td>
+  {% for cell in cells %}
+    {% set cell_key = cell.replace(' ', '_') %}
+    <td>{{ row[cell_key + '_voltage'] }}</td>
+    {% set status = row[cell_key + '_status'] | lower %}
+    <td class="status-{{ 'ok' if 'ok' in status else 'under' if 'under' in status else 'over' if 'over' in status else '' }}">
+      {{ row[cell_key + '_status'] }}
+    </td>
+  {% endfor %}
+</tr>
+{% endfor %}

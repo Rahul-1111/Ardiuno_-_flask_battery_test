@@ -215,7 +215,21 @@ def view_data():
     c.execute("SELECT * FROM battery_log ORDER BY timestamp DESC LIMIT 100")
     records = c.fetchall()
     conn.close()
-    return render_template('data_view.html', records=records, cells=expected_cells)
+    cells = ['A CELL', 'B CELL', 'C CELL', 'D CELL', 'E CELL', 'F CELL', 'G CELL', 'H CELL',
+             'I CELL', 'J CELL', 'K CELL', 'L CELL', 'M CELL', 'N CELL', 'O CELL', 'P CELL']
+    return render_template('data_view.html', records=records, cells=cells)
+
+@app.route('/view-data/latest')
+def latest_data():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT * FROM battery_log ORDER BY timestamp DESC LIMIT 100")
+    records = c.fetchall()
+    conn.close()
+    cells = ['A CELL', 'B CELL', 'C CELL', 'D CELL', 'E CELL', 'F CELL', 'G CELL', 'H CELL',
+             'I CELL', 'J CELL', 'K CELL', 'L CELL', 'M CELL', 'N CELL', 'O CELL', 'P CELL']
+    return render_template('partials/data_table.html', records=records, cells=cells)
 
 # --- Start background thread ---
 def start_serial_thread():

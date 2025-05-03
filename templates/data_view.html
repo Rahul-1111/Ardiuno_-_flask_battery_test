@@ -20,7 +20,7 @@
       flex-direction: column;
     }
     header {
-      position: relative; /* Make positioning inside header possible */
+      position: relative;
       width: 100%;
       background-color: rgb(30, 173, 175);
       color: white;
@@ -29,7 +29,7 @@
       text-transform: uppercase;
       font-weight: bold;
     }
-    
+
     #databasePageBtn {
       position: absolute;
       top: 10px;
@@ -41,63 +41,70 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    
+
     #databasePageBtn:hover {
       background-color: #388e3c;
     }
-    
+
     main {
       flex: 1;
       padding: 16px;
       overflow-x: auto;
     }
+
     table {
       width: 100%;
       border-collapse: separate;
-      border-spacing: 0;
-      background: #fff;
+      border-spacing: 1px;
+      background:rgb(234, 247, 249);
       border-radius: 8px;
       overflow: hidden;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
+
     thead {
       background-color: #3b82f6;
       color: white;
     }
+
     th, td {
       padding: 1px 12px;
       text-align: left;
       border-bottom: 1px solid #e5e7eb;
     }
+
     th {
-      font-weight: 600;
-      font-size: 13px;
-    }
-    tr:hover {
-      background: #f1f5f9;
-    }
-    td {
+      font-weight: 500;
       font-size: 13px;
     }
 
-    /* Status styling */
+    tr:hover {
+      background: #f1f5f9;
+    }
+
+    td {
+      font-size: 12px;
+    }
+
     .status-ok {
-      background-color: #dcfce7;
-      color: #15803d;
+      background-color:rgb(231, 248, 237);
+      color:rgb(39, 220, 105);
       font-weight: bold;
       text-align: center;
       border-radius: 4px;
     }
+
     .status-under {
-      background-color: #fee2e2;
-      color: #b91c1c;
+      background-color:rgb(249, 235, 235);
+      color:rgb(247, 62, 62);
       font-weight: bold;
       text-align: center;
       border-radius: 4px;
     }
+
     .status-over {
-      background-color: #fef9c3;
-      color: #92400e;
+      background-color:rgb(249, 243, 219);
+      color:rgb(225, 105, 31);
       font-weight: bold;
       text-align: center;
       border-radius: 4px;
@@ -113,10 +120,13 @@
   </style>
 </head>
 <body>
-  <header>Battery Cell Data Log</header>
+  <header>
+    Battery Cell Data Log
+    <button id="databasePageBtn" onclick="window.location.href='http://127.0.0.1:5001'">GO HOME</button>
+  </header>
+
   <main>
     <table>
-      <button id="databasePageBtn" onclick="window.location.href='http://127.0.0.1:5001'">GO HOME</button>
       <thead>
         <tr>
           <th>ID</th>
@@ -129,26 +139,28 @@
           {% endfor %}
         </tr>
       </thead>
-      <tbody>
-        {% for row in records %}
-        <tr>
-          <td>{{ row['id'] }}</td>
-          <td>{{ row['timestamp'] }}</td>
-          <td>{{ row['shift'] }}</td>
-          <td>{{ row['qr_code'] }}</td>
-          {% for cell in cells %}
-            {% set cell_key = cell.replace(' ', '_') %}
-            <td>{{ row[cell_key + '_voltage'] }}</td>
-            {% set status = row[cell_key + '_status'] | lower %}
-            <td class="status-{{ 'ok' if 'ok' in status else 'under' if 'under' in status else 'over' if 'over' in status else '' }}">
-            {{ row[cell_key + '_status'] }}
-            </td>
-          {% endfor %}
-        </tr>
-        {% endfor %}
+      <tbody id="table-body">
+        {% include 'partials/data_table.html' %}
       </tbody>
     </table>
   </main>
+
   <footer>© 2025 Battery Monitoring System</footer>
+
+  <script>
+    function fetchLatestData() {
+      fetch('/view-data/latest')
+        .then(response => response.text())
+        .then(html => {
+          document.getElementById('table-body').innerHTML = html;
+        })
+        .catch(error => {
+          console.error("Error fetching latest data:", error);
+        });
+    }
+
+    fetchLatestData(); // Initial load
+    setInterval(fetchLatestData, 2000); // Every 2 seconds
+  </script>
 </body>
 </html>
